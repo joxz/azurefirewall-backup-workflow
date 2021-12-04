@@ -1,0 +1,83 @@
+name: "Backup Azure Firewalls"
+on:
+  workflow_dispatch:
+
+jobs:
+  backup-run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: "Az CLI login"
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          enable-AzPSSession: true
+
+      - name: "Run AzFw Backup script"
+        uses: azure/powershell@v1
+        with:
+          inlineScript: |
+            $subscriptions = (Get-AzSubscription).id
+
+            foreach ($sub in $subscriptions) {
+              Select-AzSubscription -SubscriptionId $sub
+              $fws = Get-AzFirewall
+              foreach ($fw in $fws) {
+                $rg = $fw.ResourceGroupName
+                $fwbackupfile = "{0}.json" -f $fw.name
+                $fwbackuppath = Join-Path $pwd $fwbackupfile
+                $id = $fw.id
+                Export-AzResourceGroup -ResourceGroupName $rg -Resource $id -SkipAllParameterization -Path $fwbackuppath
+
+                $policybackupfile = "{0}-policy.json" -f $fw.name
+                $policybackuppath = Join-Path $pwd $policybackupfile
+                $policyid = $fw.FirewallPolicy.id
+                Export-AzResourceGroup -ResourceGroupName $rg -Resource $policyid -SkipAllParameterization -Path $policybackuppath
+              }
+            }
+          azPSVersion: "latest"
+
+      - name: Get current date
+        id: date
+        run: |
+          echo "::set-output name=date::$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+
+      - name: Commit changes back to repo
+        if: success()
+        uses: EndBug/add-and-commit@v7
+        with:
+          default_author: github_actions
+          add: "*.json"
+          message: "AzFw Backup ${{ steps.date.outputs.date }}"
+
+      - name: Success Notification
+        if: success()
+        uses: mikesprague/teams-incoming-webhook-action@v1
+        with:
+          github-token: ${{ github.token }}
+          webhook-url: ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
+          deploy-card: true
+          title: "AzFW backup successful"
+          color: "success"
+
+      - name: Failure Notification
+        if: failure()
+        uses: mikesprague/teams-incoming-webhook-action@v1
+        with:
+          github-token: ${{ github.token }}
+          webhook-url: ${{ secrets.MS_TEAMS_WEBHOOK_URL }}
+          deploy-card: true
+          title: "AzFW backup Failed"
+          color: "failure"
+
+      - name: Logout and purge cache
+        uses: azure/CLI@v1
+        if: always()
+        with:
+          azcliversion: "latest"
+          inlineScript: |
+            az logout
+            az cache purge
+            az account clear
