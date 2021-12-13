@@ -19,24 +19,7 @@ jobs:
         uses: azure/powershell@v1
         with:
           inlineScript: |
-            $subscriptions = (Get-AzSubscription).id
-
-            foreach ($sub in $subscriptions) {
-              Select-AzSubscription -SubscriptionId $sub
-              $fws = Get-AzFirewall
-              foreach ($fw in $fws) {
-                $rg = $fw.ResourceGroupName
-                $fwbackupfile = "{0}.json" -f $fw.name
-                $fwbackuppath = Join-Path $pwd $fwbackupfile
-                $id = $fw.id
-                Export-AzResourceGroup -ResourceGroupName $rg -Resource $id -SkipAllParameterization -Path $fwbackuppath
-
-                $policybackupfile = "{0}-policy.json" -f $fw.name
-                $policybackuppath = Join-Path $pwd $policybackupfile
-                $policyid = $fw.FirewallPolicy.id
-                Export-AzResourceGroup -ResourceGroupName $rg -Resource $policyid -SkipAllParameterization -Path $policybackuppath
-              }
-            }
+            .\azfw-backup.ps1
           azPSVersion: "latest"
 
       - name: Get current date

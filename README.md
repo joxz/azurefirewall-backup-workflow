@@ -27,6 +27,7 @@ New-AzResourceGroupDeployment -name "FirewallRestoreJob" -ResourceGroupName "MyV
 ## Powershell Script
 
 Powershell script for local testing included (`azfw-backup.ps1`)
+Uncomment first lines for local testing of the script
 
 Set the following environment variables for credentials:
 

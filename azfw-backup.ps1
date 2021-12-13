@@ -1,10 +1,11 @@
-$azureAccountName = $env:APP_ID
-$azurePassword = ConvertTo-SecureString $env:SECRET -AsPlainText -Force
+# ENABLE FOR LOCAL DEVELOPMENT
 
-$psCred = New-Object System.Management.Automation.PSCredential($azureAccountName, $azurePassword)
+#$azureAccountName = $env:APP_ID
+#$azurePassword = ConvertTo-SecureString $env:SECRET -AsPlainText -Force
 
+#$psCred = New-Object System.Management.Automation.PSCredential($azureAccountName, $azurePassword)
 
-Connect-AzAccount -ServicePrincipal -Credential $psCred -Tenant $env:TENANT_ID
+#Connect-AzAccount -ServicePrincipal -Credential $psCred -Tenant $env:TENANT_ID
 
 # Get all subscriptions in the current tenant
 $subscriptions = (Get-AzSubscription).id
@@ -24,7 +25,7 @@ foreach ($sub in $subscriptions) {
     $id = $fw.id
 
     # export template to file
-    Export-AzResourceGroup -ResourceGroupName $rg -Resource $id -SkipAllParameterization -Path $fwbackuppath
+    Export-AzResourceGroup -ResourceGroupName $rg -Resource $id -SkipAllParameterization -Path $fwbackuppath -force
 
     # get the policy associated with each firewall and set export filename
     $policybackupfile = "{0}-policy.json" -f $fw.name
@@ -32,6 +33,6 @@ foreach ($sub in $subscriptions) {
     $policyid = $fw.FirewallPolicy.id
     
     # export template to file
-    Export-AzResourceGroup -ResourceGroupName $rg -Resource $policyid -SkipAllParameterization -Path $policybackuppath
+    Export-AzResourceGroup -ResourceGroupName $rg -Resource $policyid -SkipAllParameterization -Path $policybackuppath -force
   }
 }
